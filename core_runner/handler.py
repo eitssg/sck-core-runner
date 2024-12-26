@@ -22,12 +22,14 @@ def handler(event: dict, context: dict | None) -> dict:
     The return value is the following dictionary:
 
     .. code-block:: json
+
         {
            "Status": "ok | error",
           "Message": "Executed step function '<execution_arn>' | Failed to execute step function",
           "StepFunctionInput": { "task": "... the task payload ..." },
           "ExecutionArn": "<execution_arn>"
         }
+
 
     Args:
         event (dict): The task payload object
