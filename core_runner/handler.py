@@ -7,6 +7,7 @@ import core_helper.aws as aws
 
 import core_framework as util
 from core_framework.models import TaskPayload
+from core_framework.constants import TR_RESPONSE
 
 import core_execute.stepfn as local
 
@@ -31,12 +32,14 @@ def handler(event: dict, context: dict | None) -> dict:
         }
 
 
+    Task Response is a deictionary { "Response": "..." }
+
     Args:
         event (dict): The task payload object
         context (dict | None): The context of the execution
 
     Returns:
-        dict: The result of the execution
+        dict: Task Response result of the execution
     """
     try:
         # event should have been created with TaskPayload.model_dump()
@@ -49,10 +52,7 @@ def handler(event: dict, context: dict | None) -> dict:
 
         name = generate_execution_name(task_payload)
 
-        if util.is_local_mode():
-            sfn_response = local_start_execution(task_payload, name)
-        else:
-            sfn_response = lambda_start_execution(task_payload, name)
+        sfn_response = start_execution(task_payload, name)
 
         execution_arn = sfn_response["executionArn"]
 
@@ -70,7 +70,7 @@ def handler(event: dict, context: dict | None) -> dict:
 
         log.debug("Result", details=result)
 
-        return result
+        return {TR_RESPONSE: result}
 
     except Exception as e:
         log.error("Failed to execute step function", details={"Error": str(e)})
@@ -81,7 +81,7 @@ def handler(event: dict, context: dict | None) -> dict:
         }
 
 
-def lambda_start_execution(task_payload: TaskPayload, name: str) -> dict:
+def start_execution(task_payload: TaskPayload, name: str) -> dict:
     """
     Start the execution of a step function in AWS. This will start the step function
     in the AWS Step Functions service.
@@ -95,41 +95,18 @@ def lambda_start_execution(task_payload: TaskPayload, name: str) -> dict:
     """
     region = util.get_region()
     arn = util.get_step_function_arn()
-    data = task_payload.model_dump_json()
+    data = task_payload.model_dump()
 
     log.info(
         "Executing step function in AWS",
         details={"StepFunctionArn": arn, "Input": data},
     )
 
-    sfn_client = aws.step_functions_client(region)
-    return sfn_client.start_execution(stateMachineArn=arn, name=name, input=data)
+    if util.is_local_mode():
+        sfn_client = local.step_function_client(region=region)
+    else:
+        sfn_client = aws.step_functions_client(region=region)
 
-
-def local_start_execution(task_payload: TaskPayload, name: str) -> dict:
-    """
-    Start the execution of a step function in local mode. This means it will
-    run in a shell process in the background and continue to run until it fails,
-    completes, or is stopped by the OS.
-
-    Args:
-        task_payload (TaskPayload): The task payload to execute
-        name (str): the executin name
-
-    Returns:
-        dict: Result of the job start request
-    """
-    region = util.get_region()
-    arn = f"arn:aws:states:{region}:local:execution:stateMachineName:{name}"
-
-    data = task_payload.model_dump()
-
-    log.info(
-        "Executing step function in local mode",
-        details={"StepFunctionArn": arn, "Input": data},
-    )
-
-    sfn_client = local.step_function_client(region)
     return sfn_client.start_execution(stateMachineArn=arn, name=name, input=data)
 
 
