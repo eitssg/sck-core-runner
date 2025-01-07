@@ -17,8 +17,8 @@ include = "core_runner"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-boto3 = ">=1.35.87"
-botocore = ">=1.35.87"
+boto3 = ">=1.35.93"
+botocore = ">=1.35.93"
 pyyaml = "^6.0.2"
 pyyaml-include = "^2.1"
 
@@ -33,6 +33,10 @@ develop = true
 
 [tool.poetry.dependencies.sck-core-framework]
 path = "../sck-core-framework"
+develop = true
+
+[tool.poetry.dependencies.sck-core-report]
+path = "../sck-core-report"
 develop = true
 [[tool.poetry.source]]
 name = "nexus"
@@ -52,6 +56,6 @@ initial-content = "  \"\"\"\n  This is the version informatooin for this templat
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
 flake8 = "^7.1.1"
-cfn-lint = "^1.18.4"
+cfn-lint = "^1.22.3"
 black = "^24.10.0"
 pytest-dotenv = "^0.5.2"
