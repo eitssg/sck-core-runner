@@ -10,7 +10,7 @@ authors = [ "James Barwick <jbarwick@me.com>",]
 license = "GPL-3.0-only"
 readme = "README.md"
 keywords = ["sck", "core", "aws", "cloud", "automation"]
-include = ["core_runner/_version.py"]
+include = ["core_runner/version.py"]
 
 [[tool.poetry.packages]]
 include = "core_runner"
@@ -21,12 +21,10 @@ boto3 = ">=1.35.93"
 botocore = ">=1.35.93"
 pyyaml = "^6.0.2"
 pyyaml-include = "^2.1"
-
-
 sck-core-framework = "^0.0.4"
-sck-core-db = "^0.0.4"
 sck-core-execute = "^0.0.4"
 sck-core-report = "^0.0.4"
+
 [[tool.poetry.source]]
 name = "nexus"
 url = "https://monster-jj.jvj28.com:9091/repository/pypi/simple/"
@@ -38,9 +36,8 @@ bump = true
 ignore-untracked = true
 style = "semver"
 
-[tool.poetry-dynamic-versioning.files."core_runner/_version.py"]
-persistent-substitution = true
-initial-content = "  \"\"\"\n  This is the version informatooin for this template\n  \"\"\"\n  __version__ = \"0.0.0\"\n  __version_tuple__ = (0, 0, 0)\n"
+[tool.poetry-dynamic-versioning.substitution]
+files = ["core_runner/__init__.py"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
@@ -48,3 +45,4 @@ flake8 = "^7.1.1"
 cfn-lint = "^1.22.3"
 black = "^24.10.0"
 pytest-dotenv = "^0.5.2"
+pytest-codecov = "^0.6.1"
