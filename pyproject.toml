@@ -4,7 +4,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry]
 name = "sck-core-runner"
-version = "0.0.3"
+version = "0.0.4"
 description = "Core Automation Runner Lambda function"
 authors = [ "James Barwick <jbarwick@me.com>",]
 license = "GPL-3.0-only"
@@ -23,21 +23,10 @@ pyyaml = "^6.0.2"
 pyyaml-include = "^2.1"
 
 
-[tool.poetry.dependencies.sck-core-execute]
-path = "../sck-core-execute"
-develop = true
-
-[tool.poetry.dependencies.sck-core-db]
-path = "../sck-core-db"
-develop = true
-
-[tool.poetry.dependencies.sck-core-framework]
-path = "../sck-core-framework"
-develop = true
-
-[tool.poetry.dependencies.sck-core-report]
-path = "../sck-core-report"
-develop = true
+sck-core-framework = "^0.0.4"
+sck-core-db = "^0.0.4"
+sck-core-execute = "^0.0.4"
+sck-core-report = "^0.0.4"
 [[tool.poetry.source]]
 name = "nexus"
 url = "https://monster-jj.jvj28.com:9091/repository/pypi/simple/"
