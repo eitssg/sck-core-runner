@@ -9,51 +9,39 @@ import core_framework as util
 from core_framework.models import TaskPayload
 from core_framework.constants import TR_RESPONSE
 
-import core_execute.stepfn as local
-
 
 def handler(event: dict, context: dict | None) -> dict:
     """
     Executes the action runner step function.
 
-    This lambda function expects a TaskPayload object as input and executes the action runner step function.
+    This Lambda function is the entry point for starting the core_execute Step Function workflow.
+    It expects a TaskPayload object (as a dictionary) and triggers the Step Function execution.
 
-    The TaskPayload is validated and a unique execution name is generated based on the TaskPayload details.
+    :param event: The task payload object, typically created via TaskPayload.model_dump().
+    :type event: dict
+    :param context: Lambda context object (optional).
+    :type context: dict or None
 
-    The return value is the following dictionary:
-
-    .. code-block:: json
+    :returns: Dictionary containing the execution result. Example::
 
         {
-           "Status": "ok | error",
-          "Message": "Executed step function '<execution_arn>' | Failed to execute step function",
-          "StepFunctionInput": { "task": "... the task payload ..." },
-          "ExecutionArn": "<execution_arn>"
+            "Response": {
+                "Status": "ok | error",
+                "Message": "Executed step function '<execution_arn>' | Failed to execute step function",
+                "StepFunctionInput": { ...task payload... },
+                "ExecutionArn": "<execution_arn>"
+            }
         }
 
-
-    Task Response is a deictionary { "Response": "..." }
-
-    Args:
-        event (dict): The task payload object
-        context (dict | None): The context of the execution
-
-    Returns:
-        dict: Task Response result of the execution
+    :raises Exception: Any error during execution is logged and returned in the response.
     """
     try:
-        # event should have been created with TaskPayload.model_dump()
         task_payload = TaskPayload(**event)
-
-        # Setup logging
-        log.setup(task_payload.Identity)
-
+        log.setup(task_payload.identity)
         log.info("Executing step function", details=task_payload.model_dump())
 
         name = generate_execution_name(task_payload)
-
         sfn_response = start_execution(task_payload, name)
-
         execution_arn = sfn_response["executionArn"]
 
         log.info(
@@ -63,13 +51,12 @@ def handler(event: dict, context: dict | None) -> dict:
 
         result = {
             "Status": "ok",
-            "Message": "Executed step function '{}'".format(execution_arn),
+            "Message": f"Executed step function '{execution_arn}'",
             "StepFunctionInput": task_payload.model_dump(),
             "ExecutionArn": execution_arn,
         }
 
         log.debug("Result", details=result)
-
         return {TR_RESPONSE: result}
 
     except Exception as e:
@@ -83,15 +70,20 @@ def handler(event: dict, context: dict | None) -> dict:
 
 def start_execution(task_payload: TaskPayload, name: str) -> dict:
     """
-    Start the execution of a step function in AWS. This will start the step function
-    in the AWS Step Functions service.
+    Start the execution of a Step Function in AWS.
 
-    Args:
-        task_payload (TaskPayload): The task payload to execute
-        name (str): The name of the execution
+    This function initializes the Step Functions client and starts a new execution
+    using the provided task payload and execution name.
 
-    Returns:
-        dict: Result of the job start request
+    :param task_payload: The task payload to execute.
+    :type task_payload: TaskPayload
+    :param name: The unique name for the execution.
+    :type name: str
+
+    :returns: Dictionary containing the Step Functions start_execution response.
+    :rtype: dict
+
+    :raises Exception: If the AWS Step Functions client fails to start the execution.
     """
     region = util.get_region()
     arn = util.get_step_function_arn()
@@ -102,45 +94,37 @@ def start_execution(task_payload: TaskPayload, name: str) -> dict:
         details={"StepFunctionArn": arn, "Input": data},
     )
 
-    if util.is_local_mode():
-        sfn_client = local.step_function_client(region=region)
-    else:
-        sfn_client = aws.step_functions_client(region=region)
-
+    sfn_client = aws.step_functions_client(region=region)
     return sfn_client.start_execution(stateMachineArn=arn, name=name, input=data)
 
 
-def generate_execution_name(task_playload: TaskPayload) -> str:
+def generate_execution_name(task_payload: TaskPayload) -> str:
     """
-    Generate a unique name for the execution.
+    Generate a unique name for the Step Function execution.
 
-    This will create a name based on deployment details and the current time.
+    The execution name is constructed from key deployment details and the current time,
+    ensuring uniqueness and traceability. The format is::
 
-    It will concatenate the following fields:
+        <task>-<portfolio>-<app>-<branch_short_name>-<build>-<timestamp>
 
-    - Task
-    - Portfolio
-    - App
-    - BranchShortName
-    - Build
-    - Current time in seconds
+    Example::
 
-    The ressult will be, for example:  ``deploy-portfolio-app-branch-build-1234567890``
+        deploy-myportfolio-myapp-main-1234-1721920000
 
-    Args:
-        task_playload (TaskPayload): The task paload to generate the name for
+    :param task_payload: The task payload to generate the name for.
+    :type task_payload: TaskPayload
 
-    Returns:
-        str: The name of the execution
+    :returns: Unique execution name string.
+    :rtype: str
     """
-    dd = task_playload.DeploymentDetails
+    dd = task_payload.deployment_details
     return "-".join(
         [
-            task_playload.Task,
-            dd.Portfolio,
-            dd.App or "",
-            dd.BranchShortName or "",
-            dd.Build or "",
+            task_payload.task,
+            dd.portfolio,
+            dd.app or "",
+            dd.branch_short_name or "",
+            dd.build or "",
             str(int(time.time())),
         ]
     )
