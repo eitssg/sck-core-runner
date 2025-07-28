@@ -4,7 +4,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry]
 name = "sck-core-runner"
-version = "0.0.8"
+version = "0.0.9"
 description = "Core Automation Runner Lambda function"
 authors = [ "James Barwick <jbarwick@me.com>",]
 license = "GPL-3.0-only"
@@ -18,10 +18,10 @@ include = "core_runner"
 python = "^3.12"
 boto3 = ">=1.39.9"
 botocore = ">=1.39.9"
-sck-core-framework = "^0.0.8"
-sck-core-db = "^0.0.8"
-sck-core-execute = "^0.0.8"
-sck-core-report = "^0.0.8"
+sck-core-framework = "^0.0.9"
+sck-core-db = "^0.0.9"
+sck-core-execute = "^0.0.9"
+sck-core-report = "^0.0.9"
 
 [[tool.poetry.source]]
 name = "nexus"
