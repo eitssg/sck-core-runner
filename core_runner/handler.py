@@ -128,14 +128,19 @@ def start_execution_local(arn: str, name: str, data: dict) -> dict:
 
                 iteration += 1
 
-                log.debug(f"Background execution iteration {iteration}: {execution_arn}")
+                log.debug(
+                    f"Background execution iteration {iteration}: {execution_arn}"
+                )
 
                 result = execute_stepfn_handler(current_data, None)
 
                 if result and "FlowControl" in result:
 
                     if result["FlowControl"] == "failure":
-                        log.error(f"Execution failed: {execution_arn}", details={"iteration": iteration, "result": result})
+                        log.error(
+                            f"Execution failed: {execution_arn}",
+                            details={"iteration": iteration, "result": result},
+                        )
                         break
 
                     if result["FlowControl"] == "success":
@@ -147,17 +152,24 @@ def start_execution_local(arn: str, name: str, data: dict) -> dict:
 
                 else:
                     log.warning(f"Unexpected result in iteration {iteration}: {result}")
-                    raise RuntimeError(f"Unexpected result in iteration {iteration}: {result}")
+                    raise RuntimeError(
+                        f"Unexpected result in iteration {iteration}: {result}"
+                    )
 
                 current_data.update(result)
 
-                log.debug(f"Workflow status: {current_data['FlowControl']}", details=result)
+                log.debug(
+                    f"Workflow status: {current_data['FlowControl']}", details=result
+                )
 
                 # Sleep 1 second before next iteration
                 time.sleep(1)
 
         except Exception as e:
-            log.error(f"Background execution failed: {execution_arn}", details={"error": str(e), "iteration": iteration})
+            log.error(
+                f"Background execution failed: {execution_arn}",
+                details={"error": str(e), "iteration": iteration},
+            )
 
     # Start background thread
     thread = threading.Thread(target=background_execution, name=name)

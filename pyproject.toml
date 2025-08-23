@@ -4,7 +4,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry]
 name = "sck-core-runner"
-version = "0.0.10"
+version = "0.0.11-pre.2+d8b61e7"
 description = "Core Automation Runner Lambda function"
 authors = [ "James Barwick <jbarwick@me.com>",]
 license = "GPL-3.0-only"
