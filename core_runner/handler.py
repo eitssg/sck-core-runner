@@ -42,14 +42,16 @@ def handler(event: dict, context: dict | None) -> dict:
     """
     try:
         task_payload = TaskPayload(**event)
+        log.set_correlation_id(task_payload.correlation_id)
+
         log.setup(task_payload.identity)
-        log.info("Executing step function", details=task_payload.model_dump())
+        log.debug("Executing step function runner", details=task_payload.model_dump())
 
         name = generate_execution_name(task_payload)
         sfn_response = start_execution(task_payload, name)
         execution_arn = sfn_response["executionArn"]
 
-        log.info(
+        log.debug(
             "Execute Engine started successfully",
             details={"ExecutionArn": execution_arn},
         )
@@ -90,27 +92,34 @@ def start_execution(task_payload: TaskPayload, name: str) -> dict:
 
     :raises Exception: If the AWS Step Functions client fails to start the execution.
     """
-    region = util.get_region()
 
-    data = task_payload.model_dump()
-
-    log.info(
-        "Executing step function in AWS",
-        details={"StepFunctionArn": arn, "Input": data},
-    )
+    # we also use this name in the fake ARN as well as for the real client.
+    region = util.get_automation_region()
 
     if util.is_local_mode():
+        # Create a fake, local state-machine arn
         arn = f"arn:aws:states:{region}:local:execution:{name}-{uuid.uuid4().hex[:8]}"
-        return start_execution_local(arn, name, data)
+        return start_execution_local(arn, name, task_payload)
     else:
+
         arn = util.get_step_function_arn()
+        data = task_payload.model_dump()
+
         sfn_client = aws.step_functions_client(region=region)
-        return sfn_client.start_execution(stateMachineArn=arn, name=name, input=data)
+        return sfn_client.start_execution(
+            stateMachineArn=arn,
+            name=name,
+            input=data,
+            traceHeader=task_payload.correlation_id,
+        )
 
 
-def start_execution_local(arn: str, name: str, data: dict) -> dict:
+def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dict:
     """
     Start execution in background thread and return immediately.
+
+    This is NOT for lambda.  We use this ONLY in local mode to emulate
+    the step-function background operations nature.
 
     This mimics real Step Functions behavior where start_execution returns
     immediately and the execution runs asynchronously.
@@ -119,8 +128,13 @@ def start_execution_local(arn: str, name: str, data: dict) -> dict:
     def background_execution():
         """Run the execution in background with workflow loop."""
         try:
+            # We are logging in this thread, so set the correlation_id
+            # for this thread
+            log.set_correlation_id(task_payload.correlation_id)
+
+            # Our fake execution ID
             execution_arn = arn
-            current_data = copy.deepcopy(data)
+            current_data = task_payload.model_dump()
             current_data["FlowControl"] = "execute"
 
             iteration = 0
@@ -128,9 +142,7 @@ def start_execution_local(arn: str, name: str, data: dict) -> dict:
 
                 iteration += 1
 
-                log.debug(
-                    f"Background execution iteration {iteration}: {execution_arn}"
-                )
+                log.debug(f"Background execution iteration {iteration}: {execution_arn}")
 
                 result = execute_stepfn_handler(current_data, None)
 
@@ -144,7 +156,7 @@ def start_execution_local(arn: str, name: str, data: dict) -> dict:
                         break
 
                     if result["FlowControl"] == "success":
-                        log.info(
+                        log.debug(
                             f"Background execution completed: {execution_arn}",
                             details={"iterations": iteration, "final_result": result},
                         )
@@ -152,15 +164,11 @@ def start_execution_local(arn: str, name: str, data: dict) -> dict:
 
                 else:
                     log.warning(f"Unexpected result in iteration {iteration}: {result}")
-                    raise RuntimeError(
-                        f"Unexpected result in iteration {iteration}: {result}"
-                    )
+                    raise RuntimeError(f"Unexpected result in iteration {iteration}: {result}")
 
                 current_data.update(result)
 
-                log.debug(
-                    f"Workflow status: {current_data['FlowControl']}", details=result
-                )
+                log.debug(f"Workflow status: {current_data['FlowControl']}", details=result)
 
                 # Sleep 1 second before next iteration
                 time.sleep(1)
