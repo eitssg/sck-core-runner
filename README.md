@@ -2,6 +2,8 @@
 
 Creates a Process ID and kicks off the Core-Execute step function.
 
+> Copilot: See [local instructions](.github/copilot-instructions.md) and [root guidance](../../.github/copilot-instructions.md) for precedence and module rules.
+
 ## Table of Contents
 
 - [Overview](#core-automation-platform)
