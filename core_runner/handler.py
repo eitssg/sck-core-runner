@@ -138,17 +138,26 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
 
             # Minimal Lambda-like context for local execution
             class LocalLambdaContext:
-                def __init__(self, timeout_ms: int | None = None, function_name: str = "core_execute.handler"):
+                def __init__(
+                    self,
+                    timeout_ms: int | None = None,
+                    function_name: str = "core_execute.handler",
+                ):
                     self._start = time.monotonic()
 
                     # Default 15 minutes; override via env LOCAL_LAMBDA_TIMEOUT_MS
-                    self._timeout_ms = int(timeout_ms or int(os.getenv("LOCAL_LAMBDA_TIMEOUT_MS", "900000")))
+                    self._timeout_ms = int(
+                        timeout_ms
+                        or int(os.getenv("LOCAL_LAMBDA_TIMEOUT_MS", "900000"))
+                    )
                     self.aws_request_id = log.get_correlation_id()
                     self.function_name = function_name
                     self.invoked_function_arn = execution_arn
                     self.memory_limit_in_mb = 256
                     self.log_group_name = log.get_identity()
-                    self.log_stream_name = datetime.now(timezone.utc).strftime("%Y/%m/%d/[local]%H%M%S")
+                    self.log_stream_name = datetime.now(timezone.utc).strftime(
+                        "%Y/%m/%d/[local]%H%M%S"
+                    )
 
                 def get_remaining_time_in_millis(self) -> int:
                     elapsed_ms = int((time.monotonic() - self._start) * 1000)
@@ -198,7 +207,11 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
             def build_parameters(params_def, data: dict):
                 if params_def is None:
                     return data
-                if isinstance(params_def, dict) and params_def.get("$") == "$" and len(params_def) == 1:
+                if (
+                    isinstance(params_def, dict)
+                    and params_def.get("$") == "$"
+                    and len(params_def) == 1
+                ):
                     return data
 
                 def transform(node):
@@ -259,8 +272,12 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                     obj = locate(resource) or locate(resource.replace(":", "."))
                     if callable(obj):
                         return obj
-                    raise RuntimeError(f"Resource not found or not callable: {resource}")
-                raise RuntimeError(f"Unsupported Resource format: {resource!r}. Use 'module.submodule:function' or a callable.")
+                    raise RuntimeError(
+                        f"Resource not found or not callable: {resource}"
+                    )
+                raise RuntimeError(
+                    f"Unsupported Resource format: {resource!r}. Use 'module.submodule:function' or a callable."
+                )
 
             # Allow JSON string or dict for the machine definition
             machine = step_function_definition
@@ -287,10 +304,18 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                 # Retry (single block)
                 retry_cfg = (definition.get("Retry") or [])[:1]
                 attempt = 0
-                interval = float(retry_cfg[0].get("IntervalSeconds", 1)) if retry_cfg else 1.0
-                backoff = float(retry_cfg[0].get("BackoffRate", 1.0)) if retry_cfg else 1.0
-                max_attempts = int(retry_cfg[0].get("MaxAttempts", 1)) if retry_cfg else 1
-                retry_errors = set(retry_cfg[0].get("ErrorEquals", [])) if retry_cfg else set()
+                interval = (
+                    float(retry_cfg[0].get("IntervalSeconds", 1)) if retry_cfg else 1.0
+                )
+                backoff = (
+                    float(retry_cfg[0].get("BackoffRate", 1.0)) if retry_cfg else 1.0
+                )
+                max_attempts = (
+                    int(retry_cfg[0].get("MaxAttempts", 1)) if retry_cfg else 1
+                )
+                retry_errors = (
+                    set(retry_cfg[0].get("ErrorEquals", [])) if retry_cfg else set()
+                )
 
                 redirected = False
                 while True:
@@ -299,9 +324,13 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                         ctx = LocalLambdaContext()
                         raw_result = callable_res(payload, ctx)
                         if not isinstance(raw_result, dict):
-                            raise RuntimeError(f"Task returned non-dict in '{state_name}': {type(raw_result)}")
+                            raise RuntimeError(
+                                f"Task returned non-dict in '{state_name}': {type(raw_result)}"
+                            )
 
-                        selected = build_selector(definition.get("ResultSelector"), raw_result)
+                        selected = build_selector(
+                            definition.get("ResultSelector"), raw_result
+                        )
                         out_obj = apply_result_path(task_input, selected, definition)
                         current_data = apply_output_path(out_obj, definition)
                         break
@@ -309,7 +338,9 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                     except Exception as e:
                         attempt += 1
                         err_code = "States.TaskFailed"
-                        retryable = ("States.ALL" in retry_errors) or (err_code in retry_errors)
+                        retryable = ("States.ALL" in retry_errors) or (
+                            err_code in retry_errors
+                        )
                         if retryable and attempt < max_attempts:
                             log.warning(
                                 "Task failed, retrying",
@@ -331,7 +362,9 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                                 error_payload = {"Error": err_code, "Cause": str(e)}
                                 rp = c.get("ResultPath", "$")
                                 current_data = apply_output_path(
-                                    apply_result_path(task_input, error_payload, {"ResultPath": rp}),
+                                    apply_result_path(
+                                        task_input, error_payload, {"ResultPath": rp}
+                                    ),
                                     c,
                                 )
                                 next_after_catch = c.get("Next")
@@ -355,7 +388,9 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                     return None, True
                 next_state = definition.get("Next")
                 if not next_state:
-                    raise RuntimeError(f"Missing 'Next' or 'End' in Task state '{state_name}'")
+                    raise RuntimeError(
+                        f"Missing 'Next' or 'End' in Task state '{state_name}'"
+                    )
                 return next_state, False
 
             def handle_choice(state_name: str, definition: dict):
@@ -372,7 +407,9 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                 if not next_state:
                     next_state = definition.get("Default")
                 if not next_state:
-                    raise RuntimeError(f"No matching Choice and no Default in '{state_name}'")
+                    raise RuntimeError(
+                        f"No matching Choice and no Default in '{state_name}'"
+                    )
                 current_data = apply_output_path(choice_input, definition)
                 if definition.get("End") is True:
                     return None, True
@@ -389,12 +426,18 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                         target = definition["Timestamp"]
                         if isinstance(target, str):
                             if target.endswith("Z"):
-                                target_dt = datetime.fromisoformat(target.replace("Z", "+00:00"))
+                                target_dt = datetime.fromisoformat(
+                                    target.replace("Z", "+00:00")
+                                )
                             else:
                                 target_dt = datetime.fromisoformat(target)
                             seconds = max(
                                 0,
-                                int((target_dt - datetime.now(timezone.utc)).total_seconds()),
+                                int(
+                                    (
+                                        target_dt - datetime.now(timezone.utc)
+                                    ).total_seconds()
+                                ),
                             )
                     except Exception:
                         seconds = 0
@@ -403,12 +446,18 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                         target_val = jp_get(wait_input, definition["TimestampPath"])
                         if isinstance(target_val, str):
                             if target_val.endswith("Z"):
-                                target_dt = datetime.fromisoformat(target_val.replace("Z", "+00:00"))
+                                target_dt = datetime.fromisoformat(
+                                    target_val.replace("Z", "+00:00")
+                                )
                             else:
                                 target_dt = datetime.fromisoformat(target_val)
                             seconds = max(
                                 0,
-                                int((target_dt - datetime.now(timezone.utc)).total_seconds()),
+                                int(
+                                    (
+                                        target_dt - datetime.now(timezone.utc)
+                                    ).total_seconds()
+                                ),
                             )
                     except Exception:
                         seconds = 0
@@ -425,7 +474,9 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                     pass_result = definition["Result"]
                 else:
                     pass_result = (
-                        build_parameters(definition.get("Parameters"), pass_input) if "Parameters" in definition else pass_input
+                        build_parameters(definition.get("Parameters"), pass_input)
+                        if "Parameters" in definition
+                        else pass_input
                     )
                 out_obj = apply_result_path(pass_input, pass_result, definition)
                 current_data = apply_output_path(out_obj, definition)
@@ -466,7 +517,9 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
 
                 handler_fn = handlers.get(stype)
                 if not handler_fn:
-                    raise RuntimeError(f"Unknown state type '{stype}' in state '{state}'")
+                    raise RuntimeError(
+                        f"Unknown state type '{stype}' in state '{state}'"
+                    )
 
                 next_state, terminated = handler_fn(state, definition)
                 if terminated:
