@@ -44,7 +44,7 @@ def handler(event: dict, context: dict | None) -> dict:
     :raises Exception: Any error during execution is logged and returned in the response.
     """
     try:
-        task_payload = TaskPayload(**event)
+        task_payload = TaskPayload.model_validate(event)
         log.set_correlation_id(task_payload.correlation_id)
 
         log.setup(task_payload.identity)
@@ -280,9 +280,16 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
 
             def handle_task(state_name: str, definition: dict):
                 nonlocal current_data, iteration
+
                 iteration += 1
-                task_input = apply_input_path(current_data, definition)
-                payload = build_parameters(definition.get("Parameters"), task_input)
+                if isinstance(current_data, dict):
+                    task_input = apply_input_path(current_data, definition)
+                else:
+                    task_input = current_data
+                if isinstance(task_input, dict):
+                    payload = build_parameters(definition.get("Parameters"), task_input)
+                else:
+                    payload = task_input
 
                 # Resolve Resource
                 resource = definition.get("Resource")
@@ -296,7 +303,7 @@ def start_execution_local(arn: str, name: str, task_payload: TaskPayload) -> dic
                 max_attempts = int(retry_cfg[0].get("MaxAttempts", 1)) if retry_cfg else 1
                 retry_errors = set(retry_cfg[0].get("ErrorEquals", [])) if retry_cfg else set()
 
-                redirected = False
+                redirected: bool = False
                 while True:
                     try:
                         # Simulate a fresh Lambda invocation context per attempt
