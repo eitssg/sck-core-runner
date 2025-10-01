@@ -1,6 +1,6 @@
 [project]
 name = "sck-core-runner"
-version = "0.1.2-pre.7+38d0d53"
+version = "1.3.0"
 description = "Core Automation Runner Lambda function"
 authors = [{ name = "James Barwick", email = "jbarwick@eits.com.sg" }]
 license = "GPL-3.0-only"
