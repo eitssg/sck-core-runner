@@ -17,6 +17,7 @@ dependencies = [
     "sck-core-db",
     "sck-core-execute",
     "sck-core-framework",
+    "sck-core-report",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +58,7 @@ exclude = '''
 sck-core-framework = { path = "../sck-core-framework", editable = true }
 sck-core-db = { path = "../sck-core-db", editable = true }
 sck-core-execute = { path = "../sck-core-execute", editable = true }
+sck-core-report = { path = "../sck-core-report", editable = true }
 
 [build-system]
 requires = ["hatchling"]
