@@ -1,5 +1,8 @@
 # Copilot Instructions (Submodule: sck-core-runner)
 
+## Plan → Approval → Execute (Mandatory)
+Adhere to root workflow: propose plan before any code/test/lint modifications; execute only after approval.
+
 - Tech: Python package.
 - Precedence: Local first; then root `../../.github/...`.
 - Conventions: Follow `../sck-core-ui/docs/backend-code-style.md` for consistency.
