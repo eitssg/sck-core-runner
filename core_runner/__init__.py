@@ -1,1 +1,5 @@
-__version__ = "0.1.2-pre.7+38d0d53"
+"""Execute Step-Function Core Runner Lambda"""
+
+from importlib.metadata import version
+
+__version__ = version("sck-core-runner")
